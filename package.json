@@ -1,0 +1,14 @@
+{
+  "name": "touchpad-web-component",
+  "module": "index.ts",
+  "type": "module",
+  "scripts": {
+    "build": "bun build --entrypoints ./src/touchpad.ts --outdir ./build --minify-whitespace --minify-syntax"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.3.6"
+  },
+  "peerDependencies": {
+    "typescript": "^5.9.3"
+  }
+}

@@ -1,0 +1,99 @@
+<body>
+<style>
+    #target {
+        background-color: magenta;
+        position: absolute;
+        z-index: -1;
+        width: 100px;
+        height: 100px;
+    }
+    #touchpad {
+        border: 1px solid blue;
+        width: 1000px;
+        height: 1000px;
+    }
+    #deadzone, #control {
+        position: absolute;
+        border-radius: 50%;
+        border: 1px solid green;
+    }
+    #control {
+        border-color: red;
+    }
+</style>
+<script src="./build/touchpad.js" type="module"></script>
+<touchpad-component id='touchpad' analogmax="1">
+    <p id="log">0, 0</p>
+    <div id="deadzone"></div>
+    <div id="control"></div>
+    <div id="target"></div>
+</touchpad-component>
+<script>
+    window.addEventListener('load', () => {
+        const touchpadElement = document.querySelector('#touchpad')
+        const deadzoneElement = document.querySelector('#deadzone')
+        const controlElement = document.querySelector('#control')
+        const logElement = document.querySelector('#log')
+        const targetElement = document.querySelector('#target')
+        let pointerId = NaN
+        let targetX = 0
+        let targetY = 0
+        let _analogX = 0
+        let _analogY = 0
+
+        const moveTarget = () => {
+            targetElement.style.left = targetX = targetX + _analogX * 4
+            targetElement.style.top = targetY = targetY + _analogY * 4
+        }
+        let intervalId = NaN
+
+        touchpadElement.addEventListener('pointerdown', event => {
+            deadzoneElement.style.width = touchpadElement.deadzoneRadius * 2 + 'px'
+            deadzoneElement.style.height = touchpadElement.deadzoneRadius * 2 + 'px'
+            controlElement.style.width = touchpadElement.controlRadius * 2 + 'px'
+            controlElement.style.height = touchpadElement.controlRadius * 2 + 'px'
+
+            if (pointerId === pointerId) return
+
+            pointerId = event.pointerId
+
+            const analogData = touchpadElement.getAnalogData(pointerId)
+
+            if (!analogData) return
+            const { deadzoneX, deadzoneY, controlX, controlY } = analogData
+
+            deadzoneElement.style.left = event.pageX - touchpadElement.deadzoneRadius
+            deadzoneElement.style.top = event.pageY - touchpadElement.deadzoneRadius
+            controlElement.style.left = event.pageX - touchpadElement.controlRadius
+            controlElement.style.top = event.pageY - touchpadElement.controlRadius
+
+            intervalId = setInterval(moveTarget, 1000 / 60)
+        })
+
+        touchpadElement.addEventListener('pointermove', event => {
+            if (pointerId !== event.pointerId) return
+
+            const analogData = touchpadElement.getAnalogData(pointerId)
+
+            if (!analogData) return
+
+            pointerId = event.pointerId
+            const { deadzoneX, deadzoneY, controlX, controlY, analogX, analogY } = analogData
+
+            _analogX = analogX
+            _analogY = analogY
+
+            logElement.textContent = `${analogX}, ${analogY}`
+            deadzoneElement.style.left = deadzoneX - touchpadElement.deadzoneRadius
+            deadzoneElement.style.top = deadzoneY - touchpadElement.deadzoneRadius
+            controlElement.style.left = controlX - touchpadElement.controlRadius
+            controlElement.style.top = controlY - touchpadElement.controlRadius
+        })
+
+        touchpadElement.addEventListener('pointerup', event => {
+            pointerId = NaN
+            clearInterval(intervalId)
+        })
+    })
+</script>
+</body>
