@@ -236,7 +236,7 @@ const ponterUpListener = function (this: PointerListenerObject, event: PointerEv
 
 const TouchpadMap = new WeakMap<Touchpad, TouchpadData>
 
-class Touchpad extends HTMLElement {
+export class Touchpad extends HTMLElement {
     static observedAttributes = ['analogmax']
 
     constructor () {
