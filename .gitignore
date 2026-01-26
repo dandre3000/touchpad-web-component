@@ -1,6 +1,0 @@
-node_modules/
-build/
-ignore/
-package-lock.json
-deno.lock
-dandre3000-touchpad-web-component*.tgz
