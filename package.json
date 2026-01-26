@@ -13,7 +13,9 @@
   },
   "description": "A web component for mobile game touch input.",
   "module": "index.ts",
-  "files": ["./build"],
+  "files": [
+    "./build"
+  ],
   "exports": {
     "types": "./build/touchpad.d.ts",
     "import": "./build/touchpad.js"
