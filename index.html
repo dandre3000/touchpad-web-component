@@ -9,11 +9,10 @@
     }
     #touchpad {
         border: 1px solid blue;
-        width: 1000px;
-        height: 1000px;
     }
     #deadzone, #control {
         position: absolute;
+        display: none;
         border-radius: 50%;
         border: 1px solid green;
     }
@@ -23,9 +22,9 @@
 </style>
 <script src="./touchpad.js" type="module"></script>
 <touchpad-component id='touchpad' analogmax="1">
-    <p id="log">0, 0</p>
     <div id="deadzone"></div>
     <div id="control"></div>
+    <p id="log"></p>
     <div id="target"></div>
 </touchpad-component>
 <script>
@@ -48,11 +47,6 @@
         let intervalId = NaN
 
         touchpadElement.addEventListener('pointerdown', event => {
-            deadzoneElement.style.width = touchpadElement.deadzoneRadius * 2 + 'px'
-            deadzoneElement.style.height = touchpadElement.deadzoneRadius * 2 + 'px'
-            controlElement.style.width = touchpadElement.controlRadius * 2 + 'px'
-            controlElement.style.height = touchpadElement.controlRadius * 2 + 'px'
-
             if (pointerId === pointerId) return
 
             pointerId = event.pointerId
@@ -60,12 +54,21 @@
             const analogData = touchpadElement.getAnalogData(pointerId)
 
             if (!analogData) return
+
+            deadzoneElement.style.display = 'block'
+            controlElement.style.display = 'block'
+
+            deadzoneElement.style.width = touchpadElement.deadzoneRadius * 2 + 'px'
+            deadzoneElement.style.height = touchpadElement.deadzoneRadius * 2 + 'px'
+            controlElement.style.width = touchpadElement.controlRadius * 2 + 'px'
+            controlElement.style.height = touchpadElement.controlRadius * 2 + 'px'
+
             const { deadzoneX, deadzoneY, controlX, controlY } = analogData
 
-            deadzoneElement.style.left = event.pageX - touchpadElement.deadzoneRadius
-            deadzoneElement.style.top = event.pageY - touchpadElement.deadzoneRadius
-            controlElement.style.left = event.pageX - touchpadElement.controlRadius
-            controlElement.style.top = event.pageY - touchpadElement.controlRadius
+            deadzoneElement.style.left = event.offsetX - touchpadElement.deadzoneRadius
+            deadzoneElement.style.top = event.offsetY - touchpadElement.deadzoneRadius
+            controlElement.style.left = event.offsetX - touchpadElement.controlRadius
+            controlElement.style.top = event.offsetY - touchpadElement.controlRadius
 
             intervalId = setInterval(moveTarget, 1000 / 60)
         })
@@ -92,7 +95,13 @@
 
         touchpadElement.addEventListener('pointerup', event => {
             pointerId = NaN
+            _analogX = 0
+            _analogY = 0
+
             clearInterval(intervalId)
+
+            deadzoneElement.style.display = 'none'
+            controlElement.style.display = 'none'
         })
     })
 </script>
