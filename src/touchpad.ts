@@ -11,7 +11,7 @@ interface AnalogData {
 }
 
 interface TouchpadData {
-    touchpad: Touchpad
+    touchpad: HTMLTouchpadElement
     deadzoneRadius: number
     controlRadius: number
     analogMax: number
@@ -19,7 +19,7 @@ interface TouchpadData {
 }
 
 interface TouchListenerObject extends EventListenerObject {
-    touchpad: Touchpad
+    touchpad: HTMLTouchpadElement
 }
 
 interface PointerListenerObject extends EventListenerObject {
@@ -287,9 +287,9 @@ const ponterUpListener = function (this: PointerListenerObject, event: PointerEv
 
 const defaultDeadzoneRadius = 8
 const defaultControlRadius = 64
-const TouchpadMap = new WeakMap<Touchpad, TouchpadData>
+const TouchpadMap = new WeakMap<HTMLTouchpadElement, TouchpadData>
 
-export class Touchpad extends HTMLElement {
+export class HTMLTouchpadElement extends HTMLElement {
     static observedAttributes = ['analogmax']
 
     constructor () {
@@ -340,7 +340,6 @@ export class Touchpad extends HTMLElement {
                 if (i > touchpadData.analogMax) touchpadData.analogMap.delete(id)
                 i++
             }
-            //( as TouchpadData).analogMax = Number(newValue)
         }
     }
 
@@ -351,4 +350,4 @@ export class Touchpad extends HTMLElement {
     }
 }
 
-customElements.define('touchpad-component', Touchpad)
+customElements.define('touchpad-component', HTMLTouchpadElement)
