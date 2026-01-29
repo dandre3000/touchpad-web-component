@@ -186,54 +186,107 @@ const touchcancelListener = function (this: TouchListenerObject, event: TouchEve
     }
 }
 
+const constrainControl = (touchpadData: TouchpadData, analogData: AnalogData) => {
+    const { clientWidth, clientHeight } = touchpadData.touchpad
+
+    if (analogData.controlX < 0)
+        analogData.controlX = 0
+    else if (analogData.controlX > clientWidth)
+        analogData.controlX = clientWidth
+
+    if (analogData.controlY < 0)
+        analogData.controlY = 0
+    else if (analogData.controlY > clientHeight)
+        analogData.controlY = clientHeight
+}
+
+const constrainDeadzone = (touchpadData: TouchpadData, analogData: AnalogData) => {
+    const { controlRadius, touchpad } = touchpadData
+    const { clientWidth, clientHeight } = touchpad
+    const dx = analogData.controlX - analogData.deadzoneX
+    const dy = analogData.controlY - analogData.deadzoneY
+    const distance = Math.hypot(dx, dy)
+
+    if (distance > controlRadius) {
+        const scale = (distance - controlRadius) / distance
+
+        analogData.deadzoneX += dx * scale
+        analogData.deadzoneY += dy * scale
+    }
+}
+
 const ponterDownListener = function (this: PointerListenerObject, event: PointerEvent) {
-    if (this.touchpadData.analogMap.size < this.touchpadData.analogMax) this.touchpadData.analogMap.set(event.pointerId, {
-        pointerId: event.pointerId,
-        deadzoneX: event.pageX,
-        deadzoneY: event.pageY,
-        controlX: event.pageX,
-        controlY: event.pageY,
-        analogX: 0,
-        analogY: 0
-    })
+    const touchpadData = this.touchpadData
+
+    if (touchpadData.analogMap.size < touchpadData.analogMax) {
+        touchpadData.touchpad.setPointerCapture(event.pointerId)
+
+        const analogData = {
+            pointerId: event.pointerId,
+            deadzoneX: event.offsetX,
+            deadzoneY: event.offsetY,
+            controlX: event.offsetX,
+            controlY: event.offsetY,
+            analogX: 0,
+            analogY: 0
+        }
+
+        touchpadData.analogMap.set(event.pointerId, analogData)
+
+        constrainControl(touchpadData, analogData)
+        constrainDeadzone(touchpadData, analogData)
+    }
 }
 
 const ponterMoveListener = function (this: PointerListenerObject, event: PointerEvent) {
-    const analogData = this.touchpadData.analogMap.get(event.pointerId)
+    const touchpadData = this.touchpadData
+
+    if (touchpadData.analogMap.size === 0) return
+
+    const analogData = touchpadData.analogMap.get(event.pointerId)
 
     if (!analogData) return
 
-    const { deadzoneRadius, controlRadius } = this.touchpadData
-    let a = analogData.deadzoneX - event.pageX
-    let b = analogData.deadzoneY - event.pageY
-    let distance = Math.sqrt(a * a + b * b)
+    const { deadzoneRadius, controlRadius } = touchpadData
+    let dx = analogData.controlX - event.offsetX
+    let dy = analogData.controlY - event.offsetY
+    let distance = Math.hypot(dx, dy)
 
-    if (distance > this.touchpadData.deadzoneRadius) {
-        const ratio = (distance - this.touchpadData.deadzoneRadius) / distance
+    if (distance > controlRadius + deadzoneRadius) {
+        const scale = (distance - controlRadius - deadzoneRadius) / distance
 
-        analogData.deadzoneX -= a * ratio
-        analogData.deadzoneY -= b * ratio
+        analogData.controlX -= scale * dx
+        analogData.controlY -= scale * dy
+
+        constrainControl(touchpadData, analogData)
     }
 
-    a = analogData.controlX - event.pageX
-    b = analogData.controlY - event.pageY
-    distance = Math.sqrt(a * a + b * b)
+    dx = analogData.deadzoneX - event.offsetX
+    dy = analogData.deadzoneY - event.offsetY
+    distance = Math.hypot(dx, dy)
 
-    if (distance > controlRadius) {
-        const ratio = (distance - controlRadius) / distance
+    if (distance > deadzoneRadius) {
+        let scale = (distance - deadzoneRadius) / distance
 
-        analogData.controlX -= ratio * a
-        analogData.controlY -= ratio * b
+        analogData.deadzoneX -= dx * scale
+        analogData.deadzoneY -= dy * scale
+
+        constrainDeadzone(touchpadData, analogData)
     }
 
-    analogData.analogX = (analogData.deadzoneX - analogData.controlX) / (controlRadius - deadzoneRadius)
-    analogData.analogY = (analogData.deadzoneY - analogData.controlY) / (controlRadius - deadzoneRadius)
+    analogData.analogX = (analogData.deadzoneX - analogData.controlX) / controlRadius
+    analogData.analogY = (analogData.deadzoneY - analogData.controlY) / controlRadius
+    analogData.analogX = Math.round(analogData.analogX * 100) / 100
+    analogData.analogY = Math.round(analogData.analogY * 100) / 100
 }
 
 const ponterUpListener = function (this: PointerListenerObject, event: PointerEvent) {
+    this.touchpadData.touchpad.releasePointerCapture(event.pointerId)
     this.touchpadData.analogMap.delete(event.pointerId)
 }
 
+const defaultDeadzoneRadius = 8
+const defaultControlRadius = 64
 const TouchpadMap = new WeakMap<Touchpad, TouchpadData>
 
 export class Touchpad extends HTMLElement {
@@ -242,10 +295,10 @@ export class Touchpad extends HTMLElement {
     constructor () {
         super()
 
-        const touchpadData = {
+        const touchpadData: TouchpadData = {
             touchpad: this,
-            deadzoneRadius: 8,
-            controlRadius: 64,
+            deadzoneRadius: defaultDeadzoneRadius,
+            controlRadius: defaultControlRadius,
             analogMax: 0,
             analogMap: new Map
         }

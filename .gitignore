@@ -2,6 +2,7 @@
 /build/
 ignore/
 server.ts
+index.html
 package-lock.json
 deno.lock
 dandre3000-touchpad-web-component*.tgz
