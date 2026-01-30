@@ -41,8 +41,21 @@
         let _analogY = 0
 
         const moveTarget = () => {
-            targetElement.style.left = targetX = targetX + _analogX * 4
-            targetElement.style.top = targetY = targetY + _analogY * 4
+            targetX = targetX + _analogX * 4
+            targetY = targetY + _analogY * 4
+
+            if (targetX < 0)
+                targetX = 0
+            else if (targetX + targetElement.clientWidth > window.innerWidth)
+                targetX = window.innerWidth - targetElement.clientWidth
+
+            if (targetY < 0)
+                targetY = 0
+            else if (targetY + targetElement.clientHeight > window.innerHeight)
+                targetY = window.innerHeight - targetElement.clientHeight
+
+            targetElement.style.left = targetX
+            targetElement.style.top = targetY
         }
         let intervalId = NaN
 
@@ -64,13 +77,12 @@
             controlElement.style.height = touchpadElement.controlRadius * 2 + 'px'
 
             const { deadzoneX, deadzoneY, controlX, controlY } = analogData
+            const { x, y } = touchpadElement.getBoundingClientRect()
 
-            deadzoneElement.style.left = event.offsetX - touchpadElement.deadzoneRadius
-            deadzoneElement.style.top = event.offsetY - touchpadElement.deadzoneRadius
-            controlElement.style.left = event.offsetX - touchpadElement.controlRadius
-            controlElement.style.top = event.offsetY - touchpadElement.controlRadius
-
-            intervalId = setInterval(moveTarget, 1000 / 60)
+            deadzoneElement.style.left = x + deadzoneX - touchpadElement.deadzoneRadius
+            deadzoneElement.style.top = y + deadzoneY - touchpadElement.deadzoneRadius
+            controlElement.style.left = x + controlX - touchpadElement.controlRadius
+            controlElement.style.top = y + controlY - touchpadElement.controlRadius
         })
 
         touchpadElement.addEventListener('pointermove', event => {
@@ -86,22 +98,27 @@
             _analogX = analogX
             _analogY = analogY
 
+            const { x, y } = touchpadElement.getBoundingClientRect()
+
+            deadzoneElement.style.left = x + deadzoneX - touchpadElement.deadzoneRadius
+            deadzoneElement.style.top = y + deadzoneY - touchpadElement.deadzoneRadius
+            controlElement.style.left = x + controlX - touchpadElement.controlRadius
+            controlElement.style.top = y + controlY - touchpadElement.controlRadius
+
             logElement.textContent = `${analogX}, ${analogY}`
-            deadzoneElement.style.left = deadzoneX - touchpadElement.deadzoneRadius
-            deadzoneElement.style.top = deadzoneY - touchpadElement.deadzoneRadius
-            controlElement.style.left = controlX - touchpadElement.controlRadius
-            controlElement.style.top = controlY - touchpadElement.controlRadius
+
+            if (!intervalId) 
+                intervalId = setInterval(moveTarget, 1000 / 60)
         })
 
         touchpadElement.addEventListener('pointerup', event => {
             pointerId = NaN
-            _analogX = 0
-            _analogY = 0
-
             clearInterval(intervalId)
+            intervalId = NaN
 
             deadzoneElement.style.display = 'none'
             controlElement.style.display = 'none'
+            logElement.textContent = '0, 0'
         })
     })
 </script>
