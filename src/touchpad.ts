@@ -324,10 +324,22 @@ export class HTMLTouchpadElement extends HTMLElement {
     }
 
     get deadzoneRadius () { return TouchpadMap.get(this).deadzoneRadius }
-    set deadzoneRadius (radius) { TouchpadMap.get(this).deadzoneRadius = radius }
+    set deadzoneRadius (radius) {
+        radius = Math.round(Number(radius))
+        if (radius < 1)
+            radius = 1
+
+        TouchpadMap.get(this).deadzoneRadius = radius
+    }
 
     get controlRadius () { return TouchpadMap.get(this).controlRadius }
-    set controlRadius (radius) { TouchpadMap.get(this).controlRadius = radius }
+    set controlRadius (radius) {
+        radius = Math.round(Number(radius))
+        if (radius < 1)
+            radius = 1
+
+        TouchpadMap.get(this).controlRadius = radius
+    }
 
     getAnalogData (pointerId: number) { return TouchpadMap.get(this).analogMap.get(pointerId) || null }
 
@@ -353,7 +365,6 @@ export class HTMLTouchpadElement extends HTMLElement {
     }
 
     connectedCallback () {
-        const touchpadData = TouchpadMap.get(this)
         const root = this.attachShadow({ mode: 'closed' })
         root.innerHTML = `${TouchpadHTML}`
     }
