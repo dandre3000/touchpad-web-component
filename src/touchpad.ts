@@ -12,6 +12,8 @@ interface AnalogData {
 
 interface TouchpadData {
     touchpad: HTMLTouchpadElement
+    /** Shadow element that is the target of setPointerCapture and releasePointerCapture to prevent user tampering.  */
+    pointerCaptureTarget: HTMLElement
     deadzoneRadius: number
     controlRadius: number
     analogMax: number
@@ -193,20 +195,7 @@ const touchcancelListener = function (this: TouchListenerObject, event: TouchEve
     }
 }
 
-const constrainControl = (touchpadData: TouchpadData, analogData: AnalogData) => {
-    const controlRadius = touchpadData.controlRadius
-
-    if (analogData.controlX - controlRadius < 0)
-        analogData.controlX = controlRadius
-    else if (analogData.controlX + controlRadius > window.innerWidth)
-        analogData.controlX = window.innerWidth - controlRadius
-
-    if (analogData.controlY - controlRadius < 0)
-        analogData.controlY = controlRadius
-    else if (analogData.controlY + controlRadius > window.innerHeight)
-        analogData.controlY = window.innerHeight - controlRadius
-}
-
+/** Constrain a deadzone center to its control circle. */
 const constrainDeadzone = (touchpadData: TouchpadData, analogData: AnalogData) => {
     const controlRadius = touchpadData.controlRadius
     const dx = analogData.controlX - analogData.deadzoneX
@@ -225,7 +214,7 @@ const ponterDownListener = function (this: PointerListenerObject, event: Pointer
     const touchpadData = this.touchpadData
 
     if (touchpadData.analogMap.size < touchpadData.analogMax) {
-        touchpadData.touchpad.setPointerCapture(event.pointerId)
+        touchpadData.pointerCaptureTarget.setPointerCapture(event.pointerId)
 
         const { x, y } = touchpadData.touchpad.getBoundingClientRect()
         const analogData = {
@@ -240,7 +229,6 @@ const ponterDownListener = function (this: PointerListenerObject, event: Pointer
 
         touchpadData.analogMap.set(event.pointerId, analogData)
 
-        // constrainControl(touchpadData, analogData)
         constrainDeadzone(touchpadData, analogData)
     }
 }
@@ -254,7 +242,6 @@ const ponterMoveListener = function (this: PointerListenerObject, event: Pointer
 
     if (!analogData) return
 
-
     const { x, y } = touchpadData.touchpad.getBoundingClientRect()
     const { deadzoneRadius, controlRadius } = touchpadData
     let dx = analogData.controlX - event.clientX + x
@@ -266,8 +253,6 @@ const ponterMoveListener = function (this: PointerListenerObject, event: Pointer
 
         analogData.controlX -= scale * dx
         analogData.controlY -= scale * dy
-
-        // constrainControl(touchpadData, analogData)
     }
 
     dx = analogData.deadzoneX - event.clientX + x
@@ -290,7 +275,7 @@ const ponterMoveListener = function (this: PointerListenerObject, event: Pointer
 }
 
 const ponterUpListener = function (this: PointerListenerObject, event: PointerEvent) {
-    this.touchpadData.touchpad.releasePointerCapture(event.pointerId)
+    this.touchpadData.pointerCaptureTarget.releasePointerCapture(event.pointerId)
     this.touchpadData.analogMap.delete(event.pointerId)
 }
 
@@ -306,6 +291,7 @@ export class HTMLTouchpadElement extends HTMLElement {
 
         const touchpadData: TouchpadData = {
             touchpad: this,
+            pointerCaptureTarget: null as any,
             deadzoneRadius: defaultDeadzoneRadius,
             controlRadius: defaultControlRadius,
             analogMax: 0,
@@ -343,7 +329,7 @@ export class HTMLTouchpadElement extends HTMLElement {
 
     getAnalogData (pointerId: number) { return TouchpadMap.get(this).analogMap.get(pointerId) || null }
 
-    attributeChangedCallback (name: string, oldValue: string, newValue: string) {
+    attributeChangedCallback (name: string, _: string, newValue: string) {
         if (name === 'analogmax') {
             const touchpadData = TouchpadMap.get(this)
             const pointerIds = touchpadData.analogMap.keys()
@@ -367,6 +353,8 @@ export class HTMLTouchpadElement extends HTMLElement {
     connectedCallback () {
         const root = this.attachShadow({ mode: 'closed' })
         root.innerHTML = `${TouchpadHTML}`
+
+        TouchpadMap.get(this).pointerCaptureTarget = root.querySelector('#pointer-capture')
     }
 }
 

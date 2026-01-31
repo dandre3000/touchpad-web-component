@@ -1,6 +1,6 @@
 {
   "name": "@dandre3000/touchpad-web-component",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "license": "MIT",
   "author": {
     "name": "DeAundre Payne",
@@ -11,8 +11,18 @@
     "type": "git",
     "url": "git+https://github.com/dandre3000/touchpad-web-component.git"
   },
-  "description": "A web component for mobile game touch input.",
-  "keywords": ["input", "touch", "mouse", "pointer", "game", "browser"],
+  "description": "A web component for consistently handling touch input.",
+  "keywords": [
+    "input",
+    "touch",
+    "mouse",
+    "pointer",
+    "game",
+    "analog",
+    "joystick",
+    "browser",
+    "web-component"
+  ],
   "files": [
     "./build"
   ],
