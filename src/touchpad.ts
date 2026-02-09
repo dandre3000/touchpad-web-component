@@ -365,7 +365,7 @@ const defaultControlRadius = 64
 const TouchpadMap = new WeakMap<HTMLTouchpadElement, TouchpadData>
 
 export class HTMLTouchpadElement extends HTMLElement {
-    static observedAttributes = ['analogmax']
+    static observedAttributes = ['doubleclicktime', 'deadzoneradius', 'controlradius', 'analogmax']
 
     constructor () {
         super()
@@ -396,43 +396,76 @@ export class HTMLTouchpadElement extends HTMLElement {
         this.addEventListener('dblclick', { touchpadData, handleEvent: dblclickListener } as PointerListenerObject, true)
     }
 
-    get deadzoneRadius () { return TouchpadMap.get(this).deadzoneRadius }
-    set deadzoneRadius (radius) {
-        radius = Math.round(Number(radius))
-        if (radius < 1)
-            radius = 1
-
-        TouchpadMap.get(this).deadzoneRadius = radius
+    get doubleclicktime () { return TouchpadMap.get(this).doubleClickTime }
+    set doubleclicktime (time) {
+        this.setAttribute('doubleclicktime', time as any)
     }
 
-    get controlRadius () { return TouchpadMap.get(this).controlRadius }
-    set controlRadius (radius) {
-        radius = Math.round(Number(radius))
-        if (radius < 1)
-            radius = 1
+    get deadzoneradius () { return TouchpadMap.get(this).deadzoneRadius }
+    set deadzoneradius (radius) {
+        this.setAttribute('deadzoneradius', radius as any)
+    }
 
-        TouchpadMap.get(this).controlRadius = radius
+    get controlradius () { return TouchpadMap.get(this).controlRadius }
+    set controlradius (radius) {
+        this.setAttribute('controlradius', radius as any)
+    }
+
+    get analogmax () { return TouchpadMap.get(this).analogMax }
+    set analogmax (max) {
+        this.setAttribute('analogmax', max as any)
     }
 
     getAnalogData (pointerId: number) { return TouchpadMap.get(this).analogMap.get(pointerId) || null }
 
     attributeChangedCallback (name: string, _: string, newValue: string) {
-        if (name === 'analogmax') {
-            const touchpadData = TouchpadMap.get(this)
-            const pointerIds = touchpadData.analogMap.keys()
+        switch (name) {
+            case 'doubleclicktime': {
+                let time = Math.round(Number(newValue))
+                if (time < 100)
+                    time = 100
 
-            touchpadData.analogMax = Number(newValue)
+                TouchpadMap.get(this).doubleClickTime = time
 
-            if (touchpadData.analogMax < 1) {
-                touchpadData.analogMap.clear()
-                return
+                break
             }
+            case 'deadzoneradius': {
+                let radius = Math.round(Number(newValue))
+                if (radius < 1)
+                    radius = 1
 
-            let i = 0
+                TouchpadMap.get(this).deadzoneRadius = radius
 
-            for (const id of pointerIds) {
-                if (i > touchpadData.analogMax) touchpadData.analogMap.delete(id)
-                i++
+                break
+            }
+            case 'controlradius': {
+                let radius = Math.round(Number(newValue))
+                if (radius < 1)
+                    radius = 1
+
+                TouchpadMap.get(this).controlRadius = radius
+
+                break
+            }
+            case 'analogmax': {
+                const touchpadData = TouchpadMap.get(this)
+                const pointerIds = touchpadData.analogMap.keys()
+
+                touchpadData.analogMax = Number(newValue)
+
+                if (touchpadData.analogMax < 1) {
+                    touchpadData.analogMap.clear()
+                    return
+                }
+
+                let i = 0
+
+                for (const id of pointerIds) {
+                    if (i > touchpadData.analogMax) touchpadData.analogMap.delete(id)
+                    i++
+                }
+
+                break
             }
         }
     }
