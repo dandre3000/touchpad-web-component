@@ -24,194 +24,11 @@ interface TouchpadData {
     analogMap: Map<number, AnalogData>
 }
 
-interface TouchListenerObject extends EventListenerObject {
-    touchpad: HTMLTouchpadElement
-}
-
 interface PointerListenerObject extends EventListenerObject {
     touchpadData: TouchpadData
 }
 
-const touchstartListener = function (this: TouchListenerObject, event: TouchEvent) {
-    for (const touch of event.changedTouches) {
-        const {
-            identifier,
-            screenX,
-            screenY,
-            clientX,
-            clientY,
-            radiusX,
-            radiusY
-        } = touch
-
-        const width = radiusX * 2
-        const height = radiusY * 2
-
-        this.touchpad.dispatchEvent(new PointerEvent('pointerenter', {
-            bubbles: true,
-            pointerId: identifier,
-            pointerType: 'touch',
-            button: 0,
-            buttons: 1,
-            screenX,
-            screenY,
-            clientX,
-            clientY,
-            width,
-            height
-        }))
-
-        this.touchpad.dispatchEvent(new PointerEvent('pointerdown', {
-            bubbles: true,
-            pointerId: identifier,
-            pointerType: 'touch',
-            button: 0,
-            buttons: 1,
-            screenX,
-            screenY,
-            clientX,
-            clientY,
-            width,
-            height
-        }))
-    }
-
-    event.preventDefault()
-}
-
-const touchmoveListener = function (this: TouchListenerObject, event: TouchEvent) {
-    for (const touch of event.changedTouches) {
-        const {
-            identifier,
-            screenX,
-            screenY,
-            clientX,
-            clientY,
-            radiusX,
-            radiusY
-        } = touch
-
-        this.touchpad.dispatchEvent(new PointerEvent('pointermove', {
-            bubbles: true,
-            pointerId: identifier,
-            pointerType: 'touch',
-            button: 0,
-            buttons: 1,
-            screenX,
-            screenY,
-            clientX,
-            clientY,
-            width: radiusX * 2,
-            height: radiusY * 2,
-        }))
-    }
-
-    event.preventDefault()
-}
-
-const touchendListener = function (this: TouchListenerObject, event: TouchEvent) {
-    for (const touch of event.changedTouches) {
-        const {
-            identifier,
-            screenX,
-            screenY,
-            clientX,
-            clientY,
-            radiusX,
-            radiusY
-        } = touch
-
-        const width = radiusX * 2
-        const height = radiusY * 2
-
-        this.touchpad.dispatchEvent(new PointerEvent('pointerup', {
-            bubbles: true,
-            pointerId: identifier,
-            pointerType: 'touch',
-            button: 0,
-            buttons: 0,
-            screenX,
-            screenY,
-            clientX,
-            clientY,
-            width,
-            height
-        }))
-
-        this.touchpad.dispatchEvent(new PointerEvent('click', {
-            bubbles: true,
-            pointerId: identifier,
-            pointerType: 'touch',
-            button: 0,
-            buttons: 0,
-            screenX,
-            screenY,
-            clientX,
-            clientY,
-            width,
-            height
-        }))
-
-        this.touchpad.dispatchEvent(new PointerEvent('pointerleave', {
-            bubbles: true,
-            pointerId: identifier,
-            pointerType: 'touch',
-            button: 0,
-            buttons: 0,
-            screenX,
-            screenY,
-            clientX,
-            clientY,
-            width,
-            height
-        }))
-    }
-}
-
-const touchcancelListener = function (this: TouchListenerObject, event: TouchEvent) {
-    for (const touch of event.targetTouches) {
-        const {
-            identifier,
-            screenX,
-            screenY,
-            clientX,
-            clientY,
-            radiusX,
-            radiusY
-        } = touch
-
-        const width = radiusX * 2
-        const height = radiusY * 2
-
-        this.touchpad.dispatchEvent(new PointerEvent('pointerup', {
-            bubbles: true,
-            pointerId: identifier,
-            pointerType: 'touch',
-            button: 0,
-            buttons: 0,
-            screenX,
-            screenY,
-            clientX,
-            clientY,
-            width,
-            height
-        }))
-
-        this.touchpad.dispatchEvent(new PointerEvent('pointerleave', {
-            bubbles: true,
-            pointerId: identifier,
-            pointerType: 'touch',
-            button: 0,
-            buttons: 0,
-            screenX,
-            screenY,
-            clientX,
-            clientY,
-            width,
-            height
-        }))
-    }
-}
+const stopImmediatePropagation = (event: Event) => event.stopImmediatePropagation()
 
 /** Constrain a deadzone center to its control circle. */
 const constrainDeadzone = (touchpadData: TouchpadData, analogData: AnalogData) => {
@@ -249,6 +66,8 @@ const pointerdownListener = function (this: PointerListenerObject, event: Pointe
 
         constrainDeadzone(touchpadData, analogData)
     }
+
+    event.preventDefault()
 }
 
 const pointermoveListener = function (this: PointerListenerObject, event: PointerEvent) {
@@ -290,6 +109,8 @@ const pointermoveListener = function (this: PointerListenerObject, event: Pointe
     analogData.analogY = (analogData.deadzoneY - analogData.controlY) / controlRadius
     analogData.analogX = Math.round(analogData.analogX * 100) / 100
     analogData.analogY = Math.round(analogData.analogY * 100) / 100
+
+    event.preventDefault()
 }
 
 const pointerupListener = function (this: PointerListenerObject, event: PointerEvent) {
@@ -385,13 +206,15 @@ export class HTMLTouchpadElement extends HTMLElement {
 
         TouchpadMap.set(this, touchpadData)
 
-        this.addEventListener('touchstart', { touchpad: this, handleEvent: touchstartListener } as TouchListenerObject, true)
-        this.addEventListener('touchmove', { touchpad: this, handleEvent: touchmoveListener } as TouchListenerObject, true)
-        this.addEventListener('touchend', { touchpad: this, handleEvent: touchendListener } as TouchListenerObject, true)
-        this.addEventListener('touchcancel', { touchpad: this, handleEvent: touchcancelListener } as TouchListenerObject, true)
         this.addEventListener('pointerdown', { touchpadData, handleEvent: pointerdownListener } as PointerListenerObject, true)
+        this.addEventListener('touchstart', stopImmediatePropagation)
+        this.addEventListener('mousedown', stopImmediatePropagation)
         this.addEventListener('pointermove', { touchpadData, handleEvent: pointermoveListener } as PointerListenerObject, true)
+        this.addEventListener('touchmove', stopImmediatePropagation)
+        this.addEventListener('mousemove', stopImmediatePropagation)
         this.addEventListener('pointerup', { touchpadData, handleEvent: pointerupListener } as PointerListenerObject, true)
+        this.addEventListener('touchend', stopImmediatePropagation)
+        this.addEventListener('mouseup', stopImmediatePropagation)
         this.addEventListener('click', { touchpadData, handleEvent: clickListener } as PointerListenerObject, true)
         this.addEventListener('dblclick', { touchpadData, handleEvent: dblclickListener } as PointerListenerObject, true)
     }
