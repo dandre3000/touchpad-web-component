@@ -40,6 +40,11 @@
         let _analogX = 0
         let _analogY = 0
 
+        targetElement.style.left = 0
+        targetElement.style.top = 0
+
+        logElement.textContent = 'Click here!'
+
         const moveTarget = () => {
             targetX = targetX + _analogX * 4
             targetY = targetY + _analogY * 4
@@ -71,18 +76,18 @@
             deadzoneElement.style.display = 'block'
             controlElement.style.display = 'block'
 
-            deadzoneElement.style.width = touchpadElement.deadzoneRadius * 2 + 'px'
-            deadzoneElement.style.height = touchpadElement.deadzoneRadius * 2 + 'px'
-            controlElement.style.width = touchpadElement.controlRadius * 2 + 'px'
-            controlElement.style.height = touchpadElement.controlRadius * 2 + 'px'
+            deadzoneElement.style.width = touchpadElement.deadzoneradius * 2 + 'px'
+            deadzoneElement.style.height = touchpadElement.deadzoneradius * 2 + 'px'
+            controlElement.style.width = touchpadElement.controlradius * 2 + 'px'
+            controlElement.style.height = touchpadElement.controlradius * 2 + 'px'
 
             const { deadzoneX, deadzoneY, controlX, controlY } = analogData
             const { x, y } = touchpadElement.getBoundingClientRect()
 
-            deadzoneElement.style.left = x + deadzoneX - touchpadElement.deadzoneRadius
-            deadzoneElement.style.top = y + deadzoneY - touchpadElement.deadzoneRadius
-            controlElement.style.left = x + controlX - touchpadElement.controlRadius
-            controlElement.style.top = y + controlY - touchpadElement.controlRadius
+            deadzoneElement.style.left = x + deadzoneX - touchpadElement.deadzoneradius
+            deadzoneElement.style.top = y + deadzoneY - touchpadElement.deadzoneradius
+            controlElement.style.left = x + controlX - touchpadElement.controlradius
+            controlElement.style.top = y + controlY - touchpadElement.controlradius
         })
 
         touchpadElement.addEventListener('pointermove', event => {
@@ -100,10 +105,10 @@
 
             const { x, y } = touchpadElement.getBoundingClientRect()
 
-            deadzoneElement.style.left = x + deadzoneX - touchpadElement.deadzoneRadius
-            deadzoneElement.style.top = y + deadzoneY - touchpadElement.deadzoneRadius
-            controlElement.style.left = x + controlX - touchpadElement.controlRadius
-            controlElement.style.top = y + controlY - touchpadElement.controlRadius
+            deadzoneElement.style.left = x + deadzoneX - touchpadElement.deadzoneradius
+            deadzoneElement.style.top = y + deadzoneY - touchpadElement.deadzoneradius
+            controlElement.style.left = x + controlX - touchpadElement.controlradius
+            controlElement.style.top = y + controlY - touchpadElement.controlradius
 
             logElement.textContent = `${analogX}, ${analogY}`
 
@@ -118,7 +123,7 @@
 
             deadzoneElement.style.display = 'none'
             controlElement.style.display = 'none'
-            logElement.textContent = '0, 0'
+            logElement.textContent = 'Click here!'
         })
     })
 </script>
