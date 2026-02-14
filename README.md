@@ -12,7 +12,7 @@ npm install @dandre3000/touchpad-web-component
 
 ```html
 <script src='./touchpad.js' type='module'></script>
-<touchpad-component id='touchpad' analogmax='1'></touchpad-component>
+<touchpad-component id='touchpad' analog></touchpad-component>
 ```
 
 ## Exports
