@@ -21,7 +21,7 @@
     }
 </style>
 <script src="./touchpad.js" type="module"></script>
-<touchpad-component id='touchpad' analogmax="1">
+<touchpad-component id='touchpad' analog>
     <div id="deadzone"></div>
     <div id="control"></div>
     <p id="log"></p>
@@ -69,9 +69,9 @@
 
             pointerId = event.pointerId
 
-            const analogData = touchpadElement.getAnalogData(pointerId)
+            const pointerData = touchpadElement.getPointerData(pointerId)
 
-            if (!analogData) return
+            if (!pointerData) return
 
             deadzoneElement.style.display = 'block'
             controlElement.style.display = 'block'
@@ -81,34 +81,31 @@
             controlElement.style.width = touchpadElement.controlradius * 2 + 'px'
             controlElement.style.height = touchpadElement.controlradius * 2 + 'px'
 
-            const { deadzoneX, deadzoneY, controlX, controlY } = analogData
-            const { x, y } = touchpadElement.getBoundingClientRect()
+            const { deadzoneX, deadzoneY, controlX, controlY } = pointerData
 
-            deadzoneElement.style.left = x + deadzoneX - touchpadElement.deadzoneradius
-            deadzoneElement.style.top = y + deadzoneY - touchpadElement.deadzoneradius
-            controlElement.style.left = x + controlX - touchpadElement.controlradius
-            controlElement.style.top = y + controlY - touchpadElement.controlradius
+            deadzoneElement.style.left = deadzoneX - touchpadElement.deadzoneradius
+            deadzoneElement.style.top = deadzoneY - touchpadElement.deadzoneradius
+            controlElement.style.left = controlX - touchpadElement.controlradius
+            controlElement.style.top = controlY - touchpadElement.controlradius
         })
 
         touchpadElement.addEventListener('pointermove', event => {
             if (pointerId !== event.pointerId) return
 
-            const analogData = touchpadElement.getAnalogData(pointerId)
+            const pointerData = touchpadElement.getPointerData(pointerId)
 
-            if (!analogData) return
+            if (!pointerData) return
 
             pointerId = event.pointerId
-            const { deadzoneX, deadzoneY, controlX, controlY, analogX, analogY } = analogData
+            const { deadzoneX, deadzoneY, controlX, controlY, analogX, analogY } = pointerData
 
             _analogX = analogX
             _analogY = analogY
 
-            const { x, y } = touchpadElement.getBoundingClientRect()
-
-            deadzoneElement.style.left = x + deadzoneX - touchpadElement.deadzoneradius
-            deadzoneElement.style.top = y + deadzoneY - touchpadElement.deadzoneradius
-            controlElement.style.left = x + controlX - touchpadElement.controlradius
-            controlElement.style.top = y + controlY - touchpadElement.controlradius
+            deadzoneElement.style.left = deadzoneX - touchpadElement.deadzoneradius
+            deadzoneElement.style.top = deadzoneY - touchpadElement.deadzoneradius
+            controlElement.style.left = controlX - touchpadElement.controlradius
+            controlElement.style.top = controlY - touchpadElement.controlradius
 
             logElement.textContent = `${analogX}, ${analogY}`
 
