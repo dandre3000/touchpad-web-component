@@ -1,184 +1,237 @@
 import TouchpadHTML from './touchpad.html' with { type: 'text' }
 
-interface AnalogData {
-    pointerId: number
+interface ButtonData {
+    downX: number
+    downY: number
+    pressed: boolean
+    clicks: number
+    clickTimeoutId: number
+    doubleClickTimeoutId: number
+}
+
+interface ClickData {
+    0: ButtonData
+    1: ButtonData
+    2: ButtonData
+    3: ButtonData
+    4: ButtonData
+}
+
+interface PointerData {
+    x: number
+    y: number
+    movementX: number
+    movementY: number
     deadzoneX: number
     deadzoneY: number
     controlX: number
     controlY: number
     analogX: number
     analogY: number
+    clickData: ClickData
 }
 
 interface TouchpadData {
     touchpad: HTMLTouchpadElement
     /** Shadow element that is the target of setPointerCapture and releasePointerCapture to prevent user tampering.  */
     pointerCaptureTarget: HTMLElement
-    isClicking: boolean
-    clickCount: number
+    clickDistance: number
+    clickTime: number
     doubleClickTime: number
-    doubleClickTimeoutId
     deadzoneRadius: number
     controlRadius: number
-    analogMax: number
-    analogMap: Map<number, AnalogData>
+    inPointerUp: boolean
+    pointerMap: Map<number, PointerData>
 }
 
 interface PointerListenerObject extends EventListenerObject {
     touchpadData: TouchpadData
 }
 
-const stopImmediatePropagation = (event: Event) => event.stopImmediatePropagation()
+const defaultListener = (event: Event) => {
+    event.preventDefault()
+    event.stopImmediatePropagation()
+}
 
-/** Constrain a deadzone center to its control circle. */
-const constrainDeadzone = (touchpadData: TouchpadData, analogData: AnalogData) => {
-    const controlRadius = touchpadData.controlRadius
-    const dx = analogData.controlX - analogData.deadzoneX
-    const dy = analogData.controlY - analogData.deadzoneY
-    const distance = Math.hypot(dx, dy)
+const pointerenterListener = function (this: PointerListenerObject, event: PointerEvent) {
+    const touchpadData = this.touchpadData
 
-    if (distance > controlRadius) {
-        const scale = (distance - controlRadius) / distance
+    if (event.target !== touchpadData.touchpad || touchpadData.touchpad.hasAttribute('disable')) return
 
-        analogData.deadzoneX += dx * scale
-        analogData.deadzoneY += dy * scale
-    }
+    const { clientX, clientY, pointerId } = event
+
+    touchpadData.pointerMap.set(pointerId, {
+        x: clientX,
+        y: clientY,
+        movementX: 0,
+        movementY: 0,
+        deadzoneX: clientX,
+        deadzoneY: clientY,
+        controlX: clientX,
+        controlY: clientY,
+        analogX: 0,
+        analogY: 0,
+        clickData: {
+            0: { downX: NaN, downY: NaN, pressed: false, clicks: 0, clickTimeoutId: -1, doubleClickTimeoutId: -1 },
+            1: { downX: NaN, downY: NaN, pressed: false, clicks: 0, clickTimeoutId: -1, doubleClickTimeoutId: -1 },
+            2: { downX: NaN, downY: NaN, pressed: false, clicks: 0, clickTimeoutId: -1, doubleClickTimeoutId: -1 },
+            3: { downX: NaN, downY: NaN, pressed: false, clicks: 0, clickTimeoutId: -1, doubleClickTimeoutId: -1 },
+            4: { downX: NaN, downY: NaN, pressed: false, clicks: 0, clickTimeoutId: -1, doubleClickTimeoutId: -1 }
+        }
+    })
+
+    event.preventDefault()
+}
+
+const resetClick = (buttonData: ButtonData) => {
+    buttonData.downX = NaN
+    buttonData.downY = NaN
+    buttonData.clickTimeoutId = -1
 }
 
 const pointerdownListener = function (this: PointerListenerObject, event: PointerEvent) {
     const touchpadData = this.touchpadData
 
-    touchpadData.pointerCaptureTarget.setPointerCapture(event.pointerId)
+    if (touchpadData.touchpad.hasAttribute('disable')) return
 
-    if (touchpadData.analogMap.size < touchpadData.analogMax) {
-        const { x, y } = touchpadData.touchpad.getBoundingClientRect()
-        const analogData = {
-            pointerId: event.pointerId,
-            deadzoneX: event.clientX - x,
-            deadzoneY: event.clientY - y,
-            controlX: event.clientX - x,
-            controlY: event.clientY - y,
-            analogX: 0,
-            analogY: 0
-        }
+    const { button, clientX, clientY, pointerId } = event
+    const pointerData = touchpadData.pointerMap.get(pointerId)
 
-        touchpadData.analogMap.set(event.pointerId, analogData)
+    pointerData.x = pointerData.controlX = pointerData.deadzoneX = clientX
+    pointerData.y = pointerData.controlY = pointerData.deadzoneY = clientY
 
-        constrainDeadzone(touchpadData, analogData)
-    }
+    const clickData = pointerData.clickData
 
+    clickData[button].downX = clientX
+    clickData[button].downY = clientY
+    clickData[button].pressed = true
+
+    clickData[button].clickTimeoutId = setTimeout(resetClick, touchpadData.clickTime, clickData[button])
+
+    touchpadData.pointerCaptureTarget.setPointerCapture(pointerId)
     event.preventDefault()
+}
+
+/** Constrain a deadzone center to its control circle. */
+const constrainDeadzone = (touchpadData: TouchpadData, pointerData: PointerData) => {
+    const controlRadius = touchpadData.controlRadius
+    const dx = pointerData.controlX - pointerData.deadzoneX
+    const dy = pointerData.controlY - pointerData.deadzoneY
+    const distance = Math.hypot(dx, dy)
+
+    if (distance > controlRadius) {
+        const scale = (distance - controlRadius) / distance
+
+        pointerData.deadzoneX += dx * scale
+        pointerData.deadzoneY += dy * scale
+    }
 }
 
 const pointermoveListener = function (this: PointerListenerObject, event: PointerEvent) {
     const touchpadData = this.touchpadData
 
-    if (touchpadData.analogMap.size === 0) return
+    if (touchpadData.touchpad.hasAttribute('disable')) return
 
-    const analogData = touchpadData.analogMap.get(event.pointerId)
+    const { clientX, clientY, movementX, movementY, pointerId } = event
+    const pointerData = touchpadData.pointerMap.get(pointerId)
 
-    if (!analogData) return
+    pointerData.x = clientX
+    pointerData.y = clientY
+    pointerData.movementX = movementX
+    pointerData.movementY = movementY
 
-    const { x, y } = touchpadData.touchpad.getBoundingClientRect()
+    event.preventDefault()
+
+    if (!touchpadData.touchpad.hasAttribute('analog')) return
+
     const { deadzoneRadius, controlRadius } = touchpadData
-    let dx = analogData.controlX - event.clientX + x
-    let dy = analogData.controlY - event.clientY + y
+    let dx = pointerData.controlX - event.clientX
+    let dy = pointerData.controlY - event.clientY
     let distance = Math.hypot(dx, dy)
 
     if (distance > controlRadius + deadzoneRadius) {
         const scale = (distance - controlRadius - deadzoneRadius) / distance
 
-        analogData.controlX -= scale * dx
-        analogData.controlY -= scale * dy
+        pointerData.controlX -= scale * dx
+        pointerData.controlY -= scale * dy
     }
 
-    dx = analogData.deadzoneX - event.clientX + x
-    dy = analogData.deadzoneY - event.clientY + y
+    dx = pointerData.deadzoneX - event.clientX
+    dy = pointerData.deadzoneY - event.clientY
     distance = Math.hypot(dx, dy)
 
     if (distance > deadzoneRadius) {
         let scale = (distance - deadzoneRadius) / distance
 
-        analogData.deadzoneX -= dx * scale
-        analogData.deadzoneY -= dy * scale
+        pointerData.deadzoneX -= dx * scale
+        pointerData.deadzoneY -= dy * scale
 
-        constrainDeadzone(touchpadData, analogData)
+        constrainDeadzone(touchpadData, pointerData)
     }
 
-    analogData.analogX = (analogData.deadzoneX - analogData.controlX) / controlRadius
-    analogData.analogY = (analogData.deadzoneY - analogData.controlY) / controlRadius
-    analogData.analogX = Math.round(analogData.analogX * 100) / 100
-    analogData.analogY = Math.round(analogData.analogY * 100) / 100
+    pointerData.analogX = (pointerData.deadzoneX - pointerData.controlX) / controlRadius
+    pointerData.analogY = (pointerData.deadzoneY - pointerData.controlY) / controlRadius
+    pointerData.analogX = Math.round(pointerData.analogX * 100) / 100
+    pointerData.analogY = Math.round(pointerData.analogY * 100) / 100
+}
 
-    event.preventDefault()
+const resetDoubleClick = (buttonData: ButtonData) => {
+    buttonData.clicks = 0
+    buttonData.doubleClickTimeoutId = -1
 }
 
 const pointerupListener = function (this: PointerListenerObject, event: PointerEvent) {
-    this.touchpadData.pointerCaptureTarget.releasePointerCapture(event.pointerId)
-    this.touchpadData.analogMap.delete(event.pointerId)
+    const touchpadData = this.touchpadData
+
+    if (touchpadData.touchpad.hasAttribute('disable')) return
+
+    event.preventDefault()
+
+    if (this.touchpadData.inPointerUp) return
+
+    const { button, pointerId } = event
+    const clickData = touchpadData.pointerMap.get(pointerId).clickData
+
+    clickData[button].pressed = false
+
+    if (
+        clickData[button].clickTimeoutId !== -1 &&
+        Math.hypot(event.clientX - clickData[button].downX, event.clientY - clickData[button].downY) <= this.touchpadData.clickDistance
+    ) {
+        clearTimeout(clickData[button].clickTimeoutId)
+        clickData[button].clickTimeoutId = -1
+
+        event.stopImmediatePropagation()
+
+        touchpadData.inPointerUp = true
+        touchpadData.touchpad.dispatchEvent(new PointerEvent('pointerup', event))
+
+        clickData[button].clicks++
+        const eventInit = { ...event, detail: clickData[button].clicks }
+
+        touchpadData.touchpad.dispatchEvent(new PointerEvent('click', eventInit))
+
+        if (clickData[button].doubleClickTimeoutId !== -1) {
+            clearTimeout(clickData[button].doubleClickTimeoutId)
+            clickData[button].doubleClickTimeoutId = -1
+
+            touchpadData.touchpad.dispatchEvent(new PointerEvent('dblclick', eventInit))
+        } else {
+            clickData[button].doubleClickTimeoutId = setTimeout(resetDoubleClick, touchpadData.doubleClickTime, clickData[button])
+        }
+
+        touchpadData.inPointerUp = false
+    }
+
+    touchpadData.pointerCaptureTarget.releasePointerCapture(event.pointerId)
 }
 
 const clickListener = function (this: PointerListenerObject, event: PointerEvent) {
-    if (!this.touchpadData.isClicking) {
-        this.touchpadData.isClicking = true
-        this.touchpadData.clickCount++
+    if (this.touchpadData.touchpad.hasAttribute('disable')) return
 
-        clearTimeout(this.touchpadData.doubleClickTimeoutId)
-        this.touchpadData.doubleClickTimeoutId = setTimeout(() => {
-            this.touchpadData.clickCount = 0
-        }, this.touchpadData.doubleClickTime)
+    event.preventDefault()
 
-        const {
-            pointerId,
-            pointerType,
-            button,
-            buttons,
-            screenX,
-            screenY,
-            clientX,
-            clientY,
-            width,
-            height
-        } = event
-
-        this.touchpadData.touchpad.dispatchEvent(new PointerEvent('click', {
-            bubbles: true,
-            pointerId,
-            pointerType,
-            button,
-            buttons,
-            detail: this.touchpadData.clickCount,
-            screenX,
-            screenY,
-            clientX,
-            clientY,
-            width,
-            height
-        }))
-
-        if ((this.touchpadData.clickCount ^ 1) === this.touchpadData.clickCount + 1) this.touchpadData.touchpad.dispatchEvent(new PointerEvent('dblclick', {
-            bubbles: true,
-            pointerId,
-            pointerType,
-            button,
-            buttons,
-            detail: this.touchpadData.clickCount,
-            screenX,
-            screenY,
-            clientX,
-            clientY,
-            width,
-            height
-        }))
-
-        this.touchpadData.isClicking = false
-
-        event.stopImmediatePropagation()
-    }
-}
-
-const dblclickListener = function (this: PointerListenerObject, event: PointerEvent) {
-    if (!this.touchpadData.isClicking) event.stopImmediatePropagation()
+    if (!this.touchpadData.inPointerUp) event.stopImmediatePropagation()
 }
 
 const defaultDeadzoneRadius = 8
@@ -194,29 +247,36 @@ export class HTMLTouchpadElement extends HTMLElement {
         const touchpadData: TouchpadData = {
             touchpad: this,
             pointerCaptureTarget: null as any,
-            isClicking: false,
-            clickCount: 0,
+            clickDistance: 8,
+            clickTime: 500,
             doubleClickTime: 500,
-            doubleClickTimeoutId: NaN,
+            inPointerUp: false,
             deadzoneRadius: defaultDeadzoneRadius,
             controlRadius: defaultControlRadius,
-            analogMax: 0,
-            analogMap: new Map
+            pointerMap: new Map
         }
 
         TouchpadMap.set(this, touchpadData)
 
-        this.addEventListener('pointerdown', { touchpadData, handleEvent: pointerdownListener } as PointerListenerObject, true)
-        this.addEventListener('touchstart', stopImmediatePropagation)
-        this.addEventListener('mousedown', stopImmediatePropagation)
-        this.addEventListener('pointermove', { touchpadData, handleEvent: pointermoveListener } as PointerListenerObject, true)
-        this.addEventListener('touchmove', stopImmediatePropagation)
-        this.addEventListener('mousemove', stopImmediatePropagation)
-        this.addEventListener('pointerup', { touchpadData, handleEvent: pointerupListener } as PointerListenerObject, true)
-        this.addEventListener('touchend', stopImmediatePropagation)
-        this.addEventListener('mouseup', stopImmediatePropagation)
-        this.addEventListener('click', { touchpadData, handleEvent: clickListener } as PointerListenerObject, true)
-        this.addEventListener('dblclick', { touchpadData, handleEvent: dblclickListener } as PointerListenerObject, true)
+        const listenerOptions: AddEventListenerOptions = { capture: true, passive: false }
+
+        this.addEventListener('pointerenter', { touchpadData, handleEvent: pointerenterListener } as PointerListenerObject, listenerOptions)
+        this.addEventListener('mouseenter', defaultListener, listenerOptions)
+        this.addEventListener('mouseover', defaultListener, listenerOptions)
+        this.addEventListener('pointerdown', { touchpadData, handleEvent: pointerdownListener } as PointerListenerObject, listenerOptions)
+        this.addEventListener('touchstart', defaultListener, listenerOptions)
+        this.addEventListener('mousedown', defaultListener, listenerOptions)
+        this.addEventListener('pointermove', { touchpadData, handleEvent: pointermoveListener } as PointerListenerObject, listenerOptions)
+        this.addEventListener('touchmove', defaultListener, listenerOptions)
+        this.addEventListener('mousemove', defaultListener, listenerOptions)
+        this.addEventListener('pointerup', { touchpadData, handleEvent: pointerupListener } as PointerListenerObject, listenerOptions)
+        this.addEventListener('touchend', defaultListener, listenerOptions)
+        this.addEventListener('mouseup', defaultListener, listenerOptions)
+        this.addEventListener('click', { touchpadData, handleEvent: clickListener } as PointerListenerObject, listenerOptions)
+        this.addEventListener('contextmenu', defaultListener, listenerOptions)
+        this.addEventListener('dblclick', { touchpadData, handleEvent: clickListener } as PointerListenerObject, listenerOptions)
+        this.addEventListener('mouseout', defaultListener, listenerOptions)
+        this.addEventListener('mouseleave', defaultListener, listenerOptions)
     }
 
     get doubleclicktime () { return TouchpadMap.get(this).doubleClickTime }
@@ -234,12 +294,24 @@ export class HTMLTouchpadElement extends HTMLElement {
         this.setAttribute('controlradius', radius as any)
     }
 
-    get analogmax () { return TouchpadMap.get(this).analogMax }
-    set analogmax (max) {
-        this.setAttribute('analogmax', max as any)
-    }
+    getPointerData (pointerId: number) {
+        const pointerData = TouchpadMap.get(this).pointerMap.get(pointerId)
 
-    getAnalogData (pointerId: number) { return TouchpadMap.get(this).analogMap.get(pointerId) || null }
+        if (!pointerData) return null
+
+        const pointerDataCopy: any = { ...pointerData }
+        const clickData = pointerData.clickData
+
+        pointerDataCopy.clickData = {
+            0: { pressed: clickData[0].pressed, clicks: clickData[0].clicks },
+            1: { pressed: clickData[1].pressed, clicks: clickData[1].clicks },
+            2: { pressed: clickData[2].pressed, clicks: clickData[2].clicks },
+            3: { pressed: clickData[3].pressed, clicks: clickData[3].clicks },
+            4: { pressed: clickData[4].pressed, clicks: clickData[4].clicks }
+        }
+
+        return pointerDataCopy
+    }
 
     attributeChangedCallback (name: string, _: string, newValue: string) {
         switch (name) {
@@ -267,26 +339,6 @@ export class HTMLTouchpadElement extends HTMLElement {
                     radius = 1
 
                 TouchpadMap.get(this).controlRadius = radius
-
-                break
-            }
-            case 'analogmax': {
-                const touchpadData = TouchpadMap.get(this)
-                const pointerIds = touchpadData.analogMap.keys()
-
-                touchpadData.analogMax = Number(newValue)
-
-                if (touchpadData.analogMax < 1) {
-                    touchpadData.analogMap.clear()
-                    return
-                }
-
-                let i = 0
-
-                for (const id of pointerIds) {
-                    if (i > touchpadData.analogMax) touchpadData.analogMap.delete(id)
-                    i++
-                }
 
                 break
             }
