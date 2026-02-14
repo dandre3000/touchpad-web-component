@@ -44,16 +44,18 @@ interface TouchpadData {
     pointerMap: Map<number, PointerData>
 }
 
-interface PointerListenerObject extends EventListenerObject {
+interface TouchpadListenerObject extends EventListenerObject {
     touchpadData: TouchpadData
 }
 
-const defaultListener = (event: Event) => {
+const defaultListener = function (this: TouchpadListenerObject, event: PointerEvent) {
+    if (this.touchpadData.touchpad.hasAttribute('disable')) return
+
     event.preventDefault()
     event.stopImmediatePropagation()
 }
 
-const pointerenterListener = function (this: PointerListenerObject, event: PointerEvent) {
+const pointerenterListener = function (this: TouchpadListenerObject, event: PointerEvent) {
     const touchpadData = this.touchpadData
 
     if (event.target !== touchpadData.touchpad || touchpadData.touchpad.hasAttribute('disable')) return
@@ -89,7 +91,7 @@ const resetClick = (buttonData: ButtonData) => {
     buttonData.clickTimeoutId = -1
 }
 
-const pointerdownListener = function (this: PointerListenerObject, event: PointerEvent) {
+const pointerdownListener = function (this: TouchpadListenerObject, event: PointerEvent) {
     const touchpadData = this.touchpadData
 
     if (touchpadData.touchpad.hasAttribute('disable')) return
@@ -127,7 +129,7 @@ const constrainDeadzone = (touchpadData: TouchpadData, pointerData: PointerData)
     }
 }
 
-const pointermoveListener = function (this: PointerListenerObject, event: PointerEvent) {
+const pointermoveListener = function (this: TouchpadListenerObject, event: PointerEvent) {
     const touchpadData = this.touchpadData
 
     if (touchpadData.touchpad.hasAttribute('disable')) return
@@ -180,7 +182,7 @@ const resetDoubleClick = (buttonData: ButtonData) => {
     buttonData.doubleClickTimeoutId = -1
 }
 
-const pointerupListener = function (this: PointerListenerObject, event: PointerEvent) {
+const pointerupListener = function (this: TouchpadListenerObject, event: PointerEvent) {
     const touchpadData = this.touchpadData
 
     if (touchpadData.touchpad.hasAttribute('disable')) return
@@ -226,7 +228,7 @@ const pointerupListener = function (this: PointerListenerObject, event: PointerE
     touchpadData.pointerCaptureTarget.releasePointerCapture(event.pointerId)
 }
 
-const clickListener = function (this: PointerListenerObject, event: PointerEvent) {
+const clickListener = function (this: TouchpadListenerObject, event: PointerEvent) {
     if (this.touchpadData.touchpad.hasAttribute('disable')) return
 
     event.preventDefault()
@@ -260,23 +262,23 @@ export class HTMLTouchpadElement extends HTMLElement {
 
         const listenerOptions: AddEventListenerOptions = { capture: true, passive: false }
 
-        this.addEventListener('pointerenter', { touchpadData, handleEvent: pointerenterListener } as PointerListenerObject, listenerOptions)
-        this.addEventListener('mouseenter', defaultListener, listenerOptions)
-        this.addEventListener('mouseover', defaultListener, listenerOptions)
-        this.addEventListener('pointerdown', { touchpadData, handleEvent: pointerdownListener } as PointerListenerObject, listenerOptions)
-        this.addEventListener('touchstart', defaultListener, listenerOptions)
-        this.addEventListener('mousedown', defaultListener, listenerOptions)
-        this.addEventListener('pointermove', { touchpadData, handleEvent: pointermoveListener } as PointerListenerObject, listenerOptions)
-        this.addEventListener('touchmove', defaultListener, listenerOptions)
-        this.addEventListener('mousemove', defaultListener, listenerOptions)
-        this.addEventListener('pointerup', { touchpadData, handleEvent: pointerupListener } as PointerListenerObject, listenerOptions)
-        this.addEventListener('touchend', defaultListener, listenerOptions)
-        this.addEventListener('mouseup', defaultListener, listenerOptions)
-        this.addEventListener('click', { touchpadData, handleEvent: clickListener } as PointerListenerObject, listenerOptions)
-        this.addEventListener('contextmenu', defaultListener, listenerOptions)
-        this.addEventListener('dblclick', { touchpadData, handleEvent: clickListener } as PointerListenerObject, listenerOptions)
-        this.addEventListener('mouseout', defaultListener, listenerOptions)
-        this.addEventListener('mouseleave', defaultListener, listenerOptions)
+        this.addEventListener('pointerenter', { touchpadData, handleEvent: pointerenterListener } as TouchpadListenerObject, listenerOptions)
+        this.addEventListener('mouseenter', { touchpadData, handleEvent: defaultListener } as TouchpadListenerObject, listenerOptions)
+        this.addEventListener('mouseover', { touchpadData, handleEvent: defaultListener } as TouchpadListenerObject, listenerOptions)
+        this.addEventListener('pointerdown', { touchpadData, handleEvent: pointerdownListener } as TouchpadListenerObject, listenerOptions)
+        this.addEventListener('touchstart', { touchpadData, handleEvent: defaultListener } as TouchpadListenerObject, listenerOptions)
+        this.addEventListener('mousedown', { touchpadData, handleEvent: defaultListener } as TouchpadListenerObject, listenerOptions)
+        this.addEventListener('pointermove', { touchpadData, handleEvent: pointermoveListener } as TouchpadListenerObject, listenerOptions)
+        this.addEventListener('touchmove', { touchpadData, handleEvent: defaultListener } as TouchpadListenerObject, listenerOptions)
+        this.addEventListener('mousemove', { touchpadData, handleEvent: defaultListener } as TouchpadListenerObject, listenerOptions)
+        this.addEventListener('pointerup', { touchpadData, handleEvent: pointerupListener } as TouchpadListenerObject, listenerOptions)
+        this.addEventListener('touchend', { touchpadData, handleEvent: defaultListener } as TouchpadListenerObject, listenerOptions)
+        this.addEventListener('mouseup', { touchpadData, handleEvent: defaultListener } as TouchpadListenerObject, listenerOptions)
+        this.addEventListener('click', { touchpadData, handleEvent: clickListener } as TouchpadListenerObject, listenerOptions)
+        this.addEventListener('contextmenu', { touchpadData, handleEvent: defaultListener } as TouchpadListenerObject, listenerOptions)
+        this.addEventListener('dblclick', { touchpadData, handleEvent: clickListener } as TouchpadListenerObject, listenerOptions)
+        this.addEventListener('mouseout', { touchpadData, handleEvent: defaultListener } as TouchpadListenerObject, listenerOptions)
+        this.addEventListener('mouseleave', { touchpadData, handleEvent: defaultListener } as TouchpadListenerObject, listenerOptions)
     }
 
     get doubleclicktime () { return TouchpadMap.get(this).doubleClickTime }
