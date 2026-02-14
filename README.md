@@ -18,8 +18,10 @@ npm install @dandre3000/touchpad-web-component
 ## Exports
 ### Web component: touchpad-component
 ### Attributes
-#### analogmax
-Determines the maximum amount of pointers to generate analog values for.
+#### disable
+Disable internal eventListeners.
+#### analog
+Enable the calculation of analog values.
 ### Class: HTMLTouchpadElement
 ### Instance properties
 #### deadzoneRadius
